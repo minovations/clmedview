@@ -314,7 +314,7 @@ memory_slice_get_data (Slice *slice)
   short int i16_strideY = (p_ViewportProps->i16_StartHeight < p_ViewportProps->i16_StopHeight) ? -1 : 1;
   short int i16_strideX = (p_ViewportProps->i16_StartWidth < p_ViewportProps->i16_StopWidth) ? 1 : -1;
 
-//  printf("vpp->height, vpp->width, strideY, strideX: %4d, %4d, %4d, %4d\n",p_ViewportProps->i16_StrideHeight, p_ViewportProps->i16_StrideWidth,i16_strideY, i16_strideX);
+  printf("vpp->height, vpp->width, strideY, strideX: %4d, %4d, %4d, %4d\n",p_ViewportProps->i16_StrideHeight, p_ViewportProps->i16_StrideWidth,i16_strideY, i16_strideX);
 
 
   i16_heightCnt = p_ViewportProps->i16_StopHeight;
@@ -331,9 +331,9 @@ memory_slice_get_data (Slice *slice)
       i16_positionY=(short int)(floor(ts_TmpPosition.y));
       i16_positionZ=(short int)(floor(ts_TmpPosition.z));
 
-      if ((i16_positionX >= serie->matrix.i16_x) ||
-          (i16_positionY >= serie->matrix.i16_y) ||
-          (i16_positionZ >= serie->matrix.i16_z) ||
+      if ((i16_positionX > serie->matrix.i16_x) ||
+          (i16_positionY > serie->matrix.i16_y) ||
+          (i16_positionZ > serie->matrix.i16_z) ||
           (i16_positionX < 0) ||
           (i16_positionY < 0) ||
           (i16_positionZ < 0))
