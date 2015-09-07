@@ -280,7 +280,7 @@ viewer_on_mouse_scroll (UNUSED ClutterActor *actor, ClutterEvent *event, gpointe
 
 
 void
-viewer_update_slices (List *pll_MaskSeries, double f_Z)
+viewer_update_slices (List *pll_MaskSeries, Serie *ps_serie, double f_Z)
 {
   if (list_length (pll_MaskSeries) < 1) return;
 
@@ -288,13 +288,13 @@ viewer_update_slices (List *pll_MaskSeries, double f_Z)
   while (pll_MaskSeries != NULL)
   {
     PixelData *current = pll_MaskSeries->data;
-    assert (current != NULL);
+    Serie *ps_mask = (Serie*)(current->serie);
 
-    Slice *current_slice = PIXELDATA_ACTIVE_SLICE (current);
-
-    PIXELDATA_ACTIVE_SLICE (current) =
-      memory_slice_get_nth (current_slice, f_Z);
-
+    if (ps_mask->group_id == ps_serie->group_id)
+    {
+      Slice *current_slice = PIXELDATA_ACTIVE_SLICE (current);
+      PIXELDATA_ACTIVE_SLICE (current) =  memory_slice_get_nth (current_slice, f_Z);
+    }
     pll_MaskSeries = list_next (pll_MaskSeries);
   }
 }
@@ -365,8 +365,8 @@ viewer_on_mouse_scroll_prevnext (UNUSED ClutterActor *actor, ClutterEvent *event
 
   f_Z = PIXELDATA_ACTIVE_SLICE (resources->ps_Original)->matrix.i16_z;
 
-  viewer_update_slices (resources->pll_MaskSeries, f_Z);
-  viewer_update_slices (resources->pll_OverlaySeries, f_Z);
+  viewer_update_slices (resources->pll_MaskSeries, PIXELDATA_ACTIVE_SERIE(resources->ps_Original), f_Z);
+  viewer_update_slices (resources->pll_OverlaySeries, PIXELDATA_ACTIVE_SERIE(resources->ps_Original), f_Z);
 
   viewer_update_text (resources);
   viewer_redraw (resources, REDRAW_ALL);
@@ -1242,7 +1242,7 @@ viewer_initialize (Viewer *resources, Serie *ts_Original, Serie *ts_Mask, List *
 
   // Set up the display slice resources for the mask.
   viewer_add_mask_serie (resources, ts_Mask);
-  resources->ps_ActiveMask = list_last (resources->pll_MaskSeries)->data;
+
 
   // Add overlays.
   while (pll_Overlays != NULL)
@@ -1517,11 +1517,15 @@ viewer_add_mask_serie (Viewer *resources, Serie *serie)
   /* Avoid adding a duplicate serie. */
   if (resources == NULL) return;
 
-  List *mask_layers = resources->pll_MaskSeries;
+  List *mask_layers = list_nth(resources->pll_MaskSeries,1);
   while (mask_layers != NULL)
   {
     PixelData *data = mask_layers->data;
-    if (data->serie->id == serie->id) return;
+    if (data->serie->id == serie->id)
+    {
+      resources->ps_ActiveMask = data;
+      return;
+    }
     mask_layers = list_next (mask_layers);
   }
 
@@ -1546,6 +1550,7 @@ viewer_add_mask_serie (Viewer *resources, Serie *serie)
   pixeldata_set_alpha (mask, 120);
 
   resources->pll_MaskSeries = list_append (resources->pll_MaskSeries, mask);
+  resources->ps_ActiveMask = mask;
 }
 
 

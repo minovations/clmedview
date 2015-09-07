@@ -772,7 +772,7 @@ gui_mainwindow_load_serie (Tree *pt_serie)
 
   assert (pt_mask != NULL);
   assert (pt_mask->data != NULL);
-  CONFIGURATION_ACTIVE_MASK (config) = (Serie*)(pt_mask);
+  CONFIGURATION_ACTIVE_MASK (config) = (Serie*)(pt_mask->data);
 
   ps_mask = pt_mask->data;
   if (ps_mask == NULL) return;
@@ -2387,18 +2387,9 @@ gui_mainwindow_sidebar_clicked (GtkTreeView       *ps_tree,
       {
         gui_mainwindow_load_serie (pt_serie);
         gtk_tree_view_expand_all (GTK_TREE_VIEW (ps_tree));
-
+        b_SuccesfullAction = TRUE;
         // Look for first mask in row and make it the default layer
       }
-
-      b_SuccesfullAction = TRUE;
-
-      if (pt_serie != NULL)
-      {
-        CONFIGURATION_ACTIVE_SERIE_TREE(config) = pt_serie;
-        CONFIGURATION_ACTIVE_SERIE(config) = (Serie *)(pt_serie->data);
-      }
-
     }
 
     else if ((ull_ID> 11000) && (ull_ID < 12000)) // Handle add MASK related action
