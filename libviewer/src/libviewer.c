@@ -544,6 +544,7 @@ void
 viewer_redraw_child_series (Viewer *resources, List *pll_Series, int i32_Width,
                             int i32_Height, RedrawMode redraw_mode)
 {
+  Serie* ps_activeSerie= PIXELDATA_ACTIVE_SERIE(resources->ps_Original);
   pll_Series = list_nth (pll_Series, 1);
 
   ClutterActor *child;
@@ -553,20 +554,23 @@ viewer_redraw_child_series (Viewer *resources, List *pll_Series, int i32_Width,
   {
     ps_Data = pll_Series->data;
     assert (ps_Data != NULL);
-
-    // Prevent doing too many full redraws.
-    child = (redraw_mode != REDRAW_ACTIVE || resources->ps_ActiveMask == pll_Series->data)
-      ? viewer_create_actor_from_pixeldata (ps_Data, i32_Width, i32_Height, 1)
-      : viewer_create_actor_from_pixeldata (ps_Data, i32_Width, i32_Height, 0);
-
-    // Skip a broken layer.
-    if (child == NULL)
+    if ((ps_Data->serie)->group_id == ps_activeSerie->group_id)
     {
-      pll_Series = list_next (pll_Series);
-      continue;
+      // Prevent doing too many full redraws.
+      child = (redraw_mode != REDRAW_ACTIVE || resources->ps_ActiveMask == pll_Series->data)
+        ? viewer_create_actor_from_pixeldata (ps_Data, i32_Width, i32_Height, 1)
+        : viewer_create_actor_from_pixeldata (ps_Data, i32_Width, i32_Height, 0);
+
+      // Skip a broken layer.
+      if (child == NULL)
+      {
+        pll_Series = list_next (pll_Series);
+        continue;
+      }
+
+      clutter_actor_add_child (resources->c_Actor, child);
     }
 
-    clutter_actor_add_child (resources->c_Actor, child);
     pll_Series = list_next (pll_Series);
   }
 }
@@ -1168,8 +1172,6 @@ void viewer_set_image_orientation_direction(Viewer *pt_Viewport, char *pc_Top, c
   clutter_text_set_text (CLUTTER_TEXT (pt_Viewport->c_SliceOrientationRight), pc_Right);
 }
 
-
-
 void
 viewer_initialize (Viewer *resources, Serie *ts_Original, Serie *ts_Mask, List *pll_Overlays,
                    Vector3D ts_NormalVector, Vector3D ts_PivotPoint,
@@ -1522,7 +1524,7 @@ viewer_add_mask_serie (Viewer *resources, Serie *serie)
     if (data->serie->id == serie->id) return;
     mask_layers = list_next (mask_layers);
   }
-  
+
   // Set up the display slice resources for the mask.
   Slice *mask_slice = memory_slice_new (serie);
   assert (mask_slice != NULL);
@@ -1900,6 +1902,7 @@ viewer_set_slice (Viewer *resources, int i32_SliceNumber)
   assert (resources != NULL);
 
   // Set the original data to the proper slice.
+  Serie *ps_Serie = PIXELDATA_ACTIVE_SERIE(resources->ps_Original);
   Slice *ts_CurrentSlice = PIXELDATA_ACTIVE_SLICE (resources->ps_Original);
   ts_CurrentSlice = memory_slice_get_nth (ts_CurrentSlice, i32_SliceNumber);
 
@@ -1908,9 +1911,13 @@ viewer_set_slice (Viewer *resources, int i32_SliceNumber)
   while (pll_Masks != NULL)
   {
     PixelData *ts_MaskPixelData = (PixelData *)(pll_Masks->data);
+    Serie *ps_Mask = (Serie*)(ts_MaskPixelData->serie);
 
-    Slice *ts_MaskSlice = PIXELDATA_ACTIVE_SLICE (ts_MaskPixelData);
-    ts_MaskSlice = memory_slice_get_nth (ts_MaskSlice, i32_SliceNumber);
+    if (ps_Mask->group_id == ps_Serie->group_id)
+    {
+      Slice *ts_MaskSlice = PIXELDATA_ACTIVE_SLICE (ts_MaskPixelData);
+      ts_MaskSlice = memory_slice_get_nth (ts_MaskSlice, i32_SliceNumber);
+    }
 
     pll_Masks = list_next (pll_Masks);
   }
@@ -2152,6 +2159,7 @@ viewer_get_view_mode (Viewer *resources)
 void
 viewer_refresh_data (Viewer *resources)
 {
+  Serie *ps_serie = PIXELDATA_ACTIVE_SERIE(resources->ps_Original);
   Slice *slice = PIXELDATA_ACTIVE_SLICE (resources->ps_Original);
 
   if (slice->data != NULL)
@@ -2170,15 +2178,17 @@ viewer_refresh_data (Viewer *resources)
     while (pll_MaskSeries != NULL)
     {
       ps_Data = pll_MaskSeries->data;
+      Serie *ps_mask = (Serie*)(ps_Data->serie);
+      if (ps_mask->group_id == ps_serie->group_id)
+      {
+        Slice *slice = PIXELDATA_ACTIVE_SLICE (ps_Data);
 
-      Slice *slice = PIXELDATA_ACTIVE_SLICE (ps_Data);
+        if (slice->data != NULL)
+          free (slice->data), slice->data = NULL;
 
-      if (slice->data != NULL)
-        free (slice->data), slice->data = NULL;
-
-      memory_slice_set_NormalVector(slice, &resources->ts_NormalVector);
-      slice->data = memory_slice_get_data (slice);
-
+        memory_slice_set_NormalVector(slice, &resources->ts_NormalVector);
+        slice->data = memory_slice_get_data (slice);
+      }
       pll_MaskSeries = list_next (pll_MaskSeries);
     }
   }
@@ -2294,7 +2304,7 @@ viewer_replay_recording_over_time (Viewer *resources)
 
 Coordinate
 viewer_get_voxel_position (Viewer *resources)
-{ 
+{
   Coordinate position;
   position.x = 0;
   position.y = 0;
