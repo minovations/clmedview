@@ -310,11 +310,15 @@ memory_slice_get_data (Slice *slice)
   begin = clock();
   */
 
-  short int i16_strideY = ((p_ViewportProps->i16_StopHeight - p_ViewportProps->i16_StartHeight) < 0) ? -1 : 1;
-  short int i16_strideX = ((p_ViewportProps->i16_StopWidth - p_ViewportProps->i16_StartWidth) < 0) ? -1 : 1;
 
-  i16_heightCnt = p_ViewportProps->i16_StartHeight;
-  while (i16_heightCnt != p_ViewportProps->i16_StopHeight)
+  short int i16_strideY = (p_ViewportProps->i16_StartHeight < p_ViewportProps->i16_StopHeight) ? -1 : 1;
+  short int i16_strideX = (p_ViewportProps->i16_StartWidth < p_ViewportProps->i16_StopWidth) ? 1 : -1;
+
+//  printf("vpp->height, vpp->width, strideY, strideX: %4d, %4d, %4d, %4d\n",p_ViewportProps->i16_StrideHeight, p_ViewportProps->i16_StrideWidth,i16_strideY, i16_strideX);
+
+
+  i16_heightCnt = p_ViewportProps->i16_StopHeight;
+  while (i16_heightCnt != p_ViewportProps->i16_StartHeight)
   {
     ts_TmpPosition.x = ts_PositionVector.x + i16_heightCnt*p_ViewportProps->ts_perpendicularVector.x + p_ViewportProps->i16_StartWidth * p_ViewportProps->ts_crossproductVector.x;
     ts_TmpPosition.y = ts_PositionVector.y + i16_heightCnt*p_ViewportProps->ts_perpendicularVector.y + p_ViewportProps->i16_StartWidth * p_ViewportProps->ts_crossproductVector.y;
@@ -327,11 +331,9 @@ memory_slice_get_data (Slice *slice)
       i16_positionY=(short int)(floor(ts_TmpPosition.y));
       i16_positionZ=(short int)(floor(ts_TmpPosition.z));
 
-      ts_PivotVectorInBlob = ts_algebra_vector_translate(serie->pt_RotationMatrix, &ts_TmpPosition);
-
-      if ((i16_positionX > serie->matrix.i16_x) ||
-          (i16_positionY > serie->matrix.i16_y) ||
-          (i16_positionZ > serie->matrix.i16_z) ||
+      if ((i16_positionX >= serie->matrix.i16_x) ||
+          (i16_positionY >= serie->matrix.i16_y) ||
+          (i16_positionZ >= serie->matrix.i16_z) ||
           (i16_positionX < 0) ||
           (i16_positionY < 0) ||
           (i16_positionZ < 0))
@@ -340,16 +342,11 @@ memory_slice_get_data (Slice *slice)
       }
       else
       {
-        // Flip Y
-        if (i16_strideY == 1)
-        {
-          i16_positionY = serie->matrix.i16_y - i16_positionY;
-        }
-
         if (i16_strideX == 1)
         {
-          i16_positionX = serie->matrix.i16_x - i16_positionX;
+          i16_positionX = serie->matrix.i16_x - 1 - i16_positionX;
         }
+
 
         i32_MemoryOffset  = ((int)(i16_positionZ * serie->matrix.i16_x * serie->matrix.i16_y) +
                              (int)(i16_positionY * serie->matrix.i16_x) +
